@@ -58,7 +58,7 @@ data_load_state.empty()
 ##################
 ### STOCK DATA ###
 ##################
-st.subheader(f'Stock data for {esg_data[esg_data["ticker"] == selected_stock.lower()]["name"].iloc[0]})')
+st.subheader("Stock data for", {esg_data[esg_data["ticker"] == selected_stock.lower()]["name"].iloc[0]})
 
 # Plot stock data
 fig = go.Figure()
