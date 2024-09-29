@@ -2,7 +2,7 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from datetime import date
+from datetime import date, timedelta
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
@@ -30,6 +30,7 @@ def load_esg_data():
 ######################
 START = "2000-01-01"
 TODAY = date.today().strftime("%Y-%m-%d")
+TOMORROW = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d")
 
 # Load ESG data
 esg_data = load_esg_data()
@@ -88,7 +89,7 @@ def plot_raw_data():
 
 plot_raw_data()
 
-st.dataframe(data, hide_index=True)
+st.dataframe(data.tail(), hide_index=True)
 
 
 ########################
@@ -156,16 +157,55 @@ st.write(fig2)
 ############################
 st.subheader('Forecasting with RNN')
 
-# def create_rnn_model(data):
-#     model = Sequential()
-#     model.add(SimpleRNN(128, return_sequences=True, activation='tanh', input_shape=data.shape[1:]))
-#     model.add(SimpleRNN(128, return_sequences=False, activation='tanh'))
-#     model.add(Dense(32))
-#     model.add(Dense(1))
-#     return model
+model_load_state = st.text('Creating RNN model...')
 
-# def predict_next_day(model, last_30):
-#     x_pred = np.reshape(last_30, (1, 30, 1))
-#     prediction = model.predict(x_pred)
-#     return prediction[0][0]
+def create_rnn_model(data_shape):
+    model = Sequential()
+    model.add(SimpleRNN(128, return_sequences=True, activation='tanh', input_shape=data_shape[1:]))
+    model.add(SimpleRNN(128, return_sequences=False, activation='tanh'))
+    model.add(Dense(32))
+    model.add(Dense(1))
+    return model
 
+# Sliding window approach with window of 30 days
+X, Y = [], []
+df = data['Close'].values
+for i in range(len(data) - 30 - 1):
+    X.append(df[i:(i + 30)])
+    Y.append(df[i + 30])
+X, Y = np.array(X).reshape(-1, 30, 1), np.array(Y)
+# X[0] = days 1-30, Y[0] = day 31
+# X[1] = days 2-31, Y[1] = day 32
+# X[2] = days 3-32, Y[2] = day 33
+# ...
+# X[n] = days n+1 to n+30, Y[n] = day n+31
+X_train, _, Y_train, _ = train_test_split(X, Y, test_size=0.2, random_state=42)
+
+model = create_rnn_model(X_train.shape)
+model.summary()
+
+model_load_state.text('Fitting RNN model...')
+model.compile(optimizer='adam', loss='mean_squared_error')
+model.fit(X_train, Y_train, epochs=100, batch_size=64)
+
+model_load_state.text('Predicting next day price...')
+X_pred = np.reshape(df[-30:], (1, 30, 1))
+Y_pred = model.predict(X_pred)
+predicted_price = Y_pred[0][0]
+
+model_load_state.empty()
+
+st.write(f'Predicted price for {TOMORROW}: ${predicted_price:.2f}')
+
+
+##################
+### REFERENCES ###
+##################
+st.subheader('References')
+st.markdown('''
+- [Prophet](https://facebook.github.io/prophet/)
+- [Keras](https://keras.io/)
+- [Plotly](https://plotly.com/python/)
+- [Streamlit](https://streamlit.io/)
+- [Yahoo Finance](https://pypi.org/project/yfinance/)
+''')
