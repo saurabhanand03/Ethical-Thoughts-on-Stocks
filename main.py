@@ -10,6 +10,7 @@ import plotly.graph_objs as go
 from prophet import Prophet
 from keras.models import Sequential
 from keras.layers import SimpleRNN, Dense
+from keras.metrics import MeanSquaredError
 import io
 import contextlib
 
@@ -224,7 +225,7 @@ X, Y = np.array(X).reshape(-1, 30, 1), np.array(Y)
 # ...
 # X[n] = days n+1 to n+30, Y[n] = day n+31
 
-X_train, _, Y_train, _ = train_test_split(X, Y, test_size=0.2, random_state=42)
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
 
 def create_rnn_model(data_shape):
     model = Sequential()
@@ -243,9 +244,19 @@ st.code(model_summary.getvalue())
 model_create_state.empty()
 
 model_fit_state = st.text('Fitting RNN model...')
-model.compile(optimizer='adam', loss='mean_squared_error')
-model.fit(X_train, Y_train, epochs=100, batch_size=64)
+model.compile(optimizer='adam', loss='mean_squared_error', metrics=[MeanSquaredError()])
+# model.fit(X_train, Y_train, epochs=100, batch_size=64)
+history = model.fit(X_train, Y_train, epochs=100, batch_size=64, validation_data=(X_test, Y_test))
 model_fit_state.empty()
+
+# Evaluate the model
+model_evaluate_state = st.text('Evaluating RNN model...')
+train_loss, train_mse = model.evaluate(X_train, Y_train, verbose=0)
+test_loss, test_mse = model.evaluate(X_test, Y_test, verbose=0)
+model_evaluate_state.empty()
+
+st.write(f"Train MSE: {train_mse:.4f}")
+st.write(f"Test MSE: {test_mse:.4f}")
 
 model_predict_state = st.text('Predicting next day price...')
 X_pred = np.reshape(df[-30:], (1, 30, 1))
@@ -298,3 +309,6 @@ st.markdown('''
 - [Streamlit](https://streamlit.io/)
 - [Yahoo Finance](https://pypi.org/project/yfinance/)
 ''')
+
+st.subheader('Credits')
+st.write('Saurabh Anand, Anjali Krishna, Neha Jupalli, Andria Gonzalez Lopez')
