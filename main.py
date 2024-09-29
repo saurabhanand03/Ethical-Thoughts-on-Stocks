@@ -51,6 +51,21 @@ data = load_data(selected_stock)
 esg_data = load_esg_data()
 data_load_state.empty()
 
+##################
+### STOCK DATA ###
+##################
+st.subheader('Raw data')
+
+# Plot raw data
+def plot_raw_data():
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=data['Date'], y=data['Open'], name="stock_open"))
+    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name="stock_close"))
+    st.plotly_chart(fig)
+
+plot_raw_data()
+
+st.dataframe(data, hide_index=True)
 
 ##################
 ### ESG SCORES ###
@@ -73,57 +88,83 @@ reshaped_data.set_index('Category', inplace=True)
 # Display the reshaped DataFrame
 st.dataframe(reshaped_data)
 
-
-##################
-### STOCK DATA ###
-##################
-st.subheader('Raw data')
-
-# Plot raw data
-def plot_raw_data():
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Open'], name="stock_open"))
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name="stock_close"))
-    st.plotly_chart(fig)
-
-plot_raw_data()
-
-st.dataframe(data, hide_index=True)
-
-
 ########################
-### PREDICTIVE MODEL ###
+### FINANCIAL RATIOS ###
 ########################
-st.subheader('Model Performance')
+st.subheader('Financial Ratios')
+# get ratios for the company
+def getRatios(t):
+    info = yf.Ticker(t).info
+    #price/earnings ratio
+    pe = info['forwardPE']
+    if pe < 20:
+        pe_eval = 'undervalued'
+    elif pe >= 20 and pe < 25:
+        pe_eval = 'fair'
+    else:
+        pe_eval = 'overvalued'
+    
+    #debt to equity ratio = total liabilities / shareholders equity
+    bdf = yf.Ticker(t).balance_sheet
+    se = bdf.loc['Stockholders Equity', bdf.columns[0]]
+    l = bdf.loc['Total Debt',bdf.columns[0]]
+    de = l/se
+    if de <= 1.5:
+        de_eval = 'undervalued'
+    elif de > 1.5 and de < 2:
+        de_eval = 'fair'
+    else: #>=2
+        de_eval = 'overvalued'
+    
+    return pd.DataFrame({'Price to Earnings':[pe,pe_eval],'Debt to Equity':[de,de_eval]},
+                       index=['Ratio', 'Evaluation'])
+# display the ratios for the selected stock and display its valuation
+ratios = getRatios(selected_stock)
+st.dataframe(ratios)
 
-# Train RandomForestRegressor model
-def train(df, ticker):
-    ticker_df = df[df['Ticker'] == ticker]
-    X = ticker_df[['Open', 'High', 'Low', 'Volume']]
-    y = ticker_df['Adj Close']  # adjusted closing price
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    rf = RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42)
-    rf.fit(X_train, y_train)
-    predictions = rf.predict(X_test)
-    return y_test, predictions
+# walkthrough of the meaning for each of the ratios
+st.write("Financial ratios are used to determine if a company's stocks are undervalued",
+      "or overvalued based on company data. The price to earnings ratio",
+      "compares stock price to the company's earnings. Meanwhile, the debt to equity ratio",
+      "is the ratio of total liabilities to total stockholders' equity. The financial ratios", 
+      "used for this project factor in fundamental accounting principles to draw conclusions",
+      "about the financial bases for stock price valuation.")
 
-# Prepare data for training
-data['Ticker'] = selected_stock
-y_test, predictions = train(data, selected_stock)
 
-# Display model performance
-st.write(f'Mean Squared Error: {mean_squared_error(y_test, predictions)}')
-st.write(f'R^2 Score: {r2_score(y_test, predictions)}')
 
-# Plot actual vs predicted values
-def plot_predictions(y_test, predictions):
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=y_test.index, y=y_test, mode='lines', name='Actual'))
-    fig.add_trace(go.Scatter(x=y_test.index, y=predictions, mode='lines', name='Predicted'))
-    fig.layout.update(title_text='Actual vs Predicted Prices', xaxis_rangeslider_visible=True)
-    st.plotly_chart(fig)
+# ########################
+# ### PREDICTIVE MODEL ###
+# ########################
+# st.subheader('Model Performance')
 
-plot_predictions(y_test, predictions)
+# # Train RandomForestRegressor model
+# def train(df, ticker):
+#     ticker_df = df[df['Ticker'] == ticker]
+#     X = ticker_df[['Open', 'High', 'Low', 'Volume']]
+#     y = ticker_df['Adj Close']  # adjusted closing price
+#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+#     rf = RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42)
+#     rf.fit(X_train, y_train)
+#     predictions = rf.predict(X_test)
+#     return y_test, predictions
+
+# # Prepare data for training
+# data['Ticker'] = selected_stock
+# y_test, predictions = train(data, selected_stock)
+
+# # Display model performance
+# st.write(f'Mean Squared Error: {mean_squared_error(y_test, predictions)}')
+# st.write(f'R^2 Score: {r2_score(y_test, predictions)}')
+
+# # Plot actual vs predicted values
+# def plot_predictions(y_test, predictions):
+#     fig = go.Figure()
+#     fig.add_trace(go.Scatter(x=y_test.index, y=y_test, mode='lines', name='Actual'))
+#     fig.add_trace(go.Scatter(x=y_test.index, y=predictions, mode='lines', name='Predicted'))
+#     fig.layout.update(title_text='Actual vs Predicted Prices', xaxis_rangeslider_visible=True)
+#     st.plotly_chart(fig)
+
+# plot_predictions(y_test, predictions)
 
 
 ################################
@@ -169,64 +210,3 @@ st.subheader('Forecasting with RNN')
 #     prediction = model.predict(x_pred)
 #     return prediction[0][0]
 
-########################
-### FINANCIAL RATIOS ###
-########################
-# get ratios for the company
-def getRatios(t):
-    info = yf.Ticker(t).info
-    #price/earnings ratio
-    pe = info['forwardPE']
-    if pe < 20:
-        pe_eval = 'undervalued'
-    elif pe >= 20 and pe < 25:
-        pe_eval = 'fair'
-    else:
-        pe_eval = 'overvalued'
-    
-    #price/book = market cap / book value equity
-    #book value equity = stockholders equity
-    bdf = yf.Ticker('AAPL').balance_sheet
-    se = bdf.loc['Stockholders Equity', bdf.columns[0]]
-    pb = info['marketCap']/se
-    if pb < 1:
-        pb_eval = 'undervalued'
-    elif pb == 1:
-        pb_eval = 'fair'
-    else:
-        pb_eval = 'overvalued'
-    
-    #price/earnings to growth ratio
-    peg = pe / info['earningsGrowth']
-    if peg <= 1:
-        peg_eval = 'undervalued'
-    else:
-        peg_eval = 'overvalued'
-    
-    #debt to equity ratio = total liabilities / shareholders equity
-    l = bdf.loc['Total Debt',bdf.columns[0]]
-    de = l/se
-    if de <= 1.5:
-        de_eval = 'undervalued'
-    elif de > 1.5 and de < 2:
-        de_eval = 'fair'
-    else: #>=2
-        de_eval = 'overvalued'
-    
-    return pd.DataFrame({'Price to Earnings':[pe,pe_eval],'Price to Books':[pb,pb_eval],
-                         'Price/Earnings to Growth':[peg,peg_eval],'Debt to Equity':[de,de_eval]},
-                       index=['Ratio', 'Evaluation'])
-# display the ratios for the selected stock and display its valuation
-ratios = getRatios(selected_stock)
-st.dataframe(ratios)
-
-# walkthrough of the meaning for each of the ratios
-st.write("Financial ratios are used to determine if a company's stocks are undervalued",
-      "or overvalued based on company data. The price to earnings ratio",
-      "compares stock price to the company's earnings. The price to books ratio compares",
-      "stock price to book value equity, or stockholders' equity. The price/earnings to",
-      "growth ratio factors in the price earnings ratio and compares it to the earnings",
-      "growth rate. Finally, the debt to equity ratio is the ratio of total liabilities"
-      "to total stockholders' equity. The financial ratios used for this project factor",
-      "in fundamental accounting principles to draw conclusions about the financial bases",
-      "for stock price valuation.")
