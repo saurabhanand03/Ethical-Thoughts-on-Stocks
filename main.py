@@ -169,3 +169,53 @@ st.subheader('Forecasting with RNN')
 #     prediction = model.predict(x_pred)
 #     return prediction[0][0]
 
+########################
+### FINANCIAL RATIOS ###
+########################
+# get ratios for the company
+def getRatios(t):
+    info = yf.Ticker(t).info
+    #price/earnings ratio
+    pe = info['forwardPE']
+    if pe < 20:
+        pe_eval = 'undervalued'
+    elif pe >= 20 and pe < 25:
+        pe_eval = 'fair'
+    else:
+        pe_eval = 'overvalued'
+    
+    #price/book = market cap / book value equity
+    #book value equity = stockholders equity
+    bdf = yf.Ticker('AAPL').balance_sheet
+    se = bdf.loc['Stockholders Equity', bdf.columns[0]]
+    pb = info['marketCap']/se
+    if pb < 1:
+        pb_eval = 'undervalued'
+    elif pb == 1:
+        pb_eval = 'fair'
+    else:
+        pb_eval = 'overvalued'
+    
+    #price/earnings to growth ratio
+    peg = pe / info['earningsGrowth']
+    if peg <= 1:
+        peg_eval = 'undervalued'
+    else:
+        peg_eval = 'overvalued'
+    
+    #debt to equity ratio = total liabilities / shareholders equity
+    l = bdf.loc['Total Debt',bdf.columns[0]]
+    de = l/se
+    if de <= 1.5:
+        de_eval = 'undervalued'
+    elif de > 1.5 and de < 2:
+        de_eval = 'fair'
+    else: #>=2
+        de_eval = 'overvalued'
+    
+    return pd.DataFrame({'Price to Earnings':[pe,pe_eval],'Price to Books':[pb,pb_eval],
+                         'Price/Earnings to Growth':[peg,peg_eval],'Debt to Equity':[de,de_eval]},
+                       index=['Ratio', 'Evaluation'])
+# display the ratios for the selected stock and display its valuation
+ratios = getRatios(selected_stock)
+st.dataframe(ratios)
