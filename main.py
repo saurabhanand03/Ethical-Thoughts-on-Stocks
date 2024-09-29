@@ -219,3 +219,14 @@ def getRatios(t):
 # display the ratios for the selected stock and display its valuation
 ratios = getRatios(selected_stock)
 st.dataframe(ratios)
+
+# walkthrough of the meaning for each of the ratios
+st.write("Financial ratios are used to determine if a company's stocks are undervalued",
+      "or overvalued based on company data. The price to earnings ratio",
+      "compares stock price to the company's earnings. The price to books ratio compares",
+      "stock price to book value equity, or stockholders' equity. The price/earnings to",
+      "growth ratio factors in the price earnings ratio and compares it to the earnings",
+      "growth rate. Finally, the debt to equity ratio is the ratio of total liabilities"
+      "to total stockholders' equity. The financial ratios used for this project factor",
+      "in fundamental accounting principles to draw conclusions about the financial bases",
+      "for stock price valuation.")
