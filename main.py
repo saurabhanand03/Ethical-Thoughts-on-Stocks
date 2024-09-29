@@ -81,7 +81,11 @@ st.dataframe(formatted_data, hide_index=True, use_container_width=True)
 ### ESG SCORES ###
 ##################
 st.subheader('ESG Score:')
-st.info('What is an ESG Score? An ESG score is an objective measurement or evaluation of a given company, fund, or security\'s performance with respect to Environmental, Social, and Governance (ESG) issues.')
+st.info('Invest in Your Values: Our ESG Stock Indicator empowers clients to make'+ 
+        'investment decisions that reflect their values and beliefs. By focusing on'+
+        'companies with strong Environmental, Social, and Governance practices, clients'+
+        'can grow their portfolio while supporting a sustainable and equitable future for'+
+        'all communities.')
 
 # Merge ESG ratings with stock data
 esg_data = esg_data[esg_data['ticker'] == selected_stock.lower()]
@@ -105,16 +109,14 @@ st.dataframe(reshaped_data)
 st.subheader('Financial Ratios')
 
 # walkthrough of the meaning for each of the ratios
-st.info("These ratios are used to determine if a company's stocks are undervalued"+
-      "or overvalued based on financial data. The price to earnings ratio"+
-      "compares stock price to the company's earnings. The price to books ratio compares"+
-      "stock price to book value equity, which is the same as stockholders' equity."+
-      "The price/earnings to growth ratio factors in the price earnings ratio and"+
-      "compares it to the earnings growth rate. Finally, the debt to equity ratio"+
-      "is the ratio of total liabilities to total stockholders' equity."+
-      "The financial ratios used for this project factor in fundamental accounting"+
-      "principles to draw conclusions about the financial bases for stock price"+
-      "valuation.")
+st.info("Financial ratios are used to determine if a company's stocks are undervalued "+
+      "or overvalued based on financial data. These ratios use fundamental accounting principles "+
+      "to draw conclusions about stock price valuation. The price to earnings ratio "+
+      "compares stock price to the company's earnings. The price to books ratio compares "+
+      "stock price to book value equity, which is the same as stockholders' equity. "+
+      "The price/earnings to growth ratio factors in the price earnings ratio and "+
+      "compares it to the earnings growth rate. Finally, the debt to equity ratio "+
+      "is the ratio of total liabilities to total stockholders' equity. ")
 
 # get ratios for the company
 def getRatios(t):
