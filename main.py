@@ -105,38 +105,61 @@ st.dataframe(reshaped_data)
 st.subheader('Financial Ratios')
 
 # walkthrough of the meaning for each of the ratios
-st.info("Financial ratios are used to determine if a company's stocks are undervalued " +
-      "or overvalued based on company data. The price to earnings ratio " +
-      "compares stock price to the company's earnings. Meanwhile, the debt to equity ratio " +
-      "is the ratio of total liabilities to total stockholders' equity. The financial ratios " + 
-      "used for this project factor in fundamental accounting principles to draw conclusions " +
-      "about the financial bases for stock price valuation.")
+st.info("These ratios are used to determine if a company's stocks are undervalued"+
+      "or overvalued based on financial data. The price to earnings ratio"+
+      "compares stock price to the company's earnings. The price to books ratio compares"+
+      "stock price to book value equity, which is the same as stockholders' equity."+
+      "The price/earnings to growth ratio factors in the price earnings ratio and"+
+      "compares it to the earnings growth rate. Finally, the debt to equity ratio"+
+      "is the ratio of total liabilities to total stockholders' equity."+
+      "The financial ratios used for this project factor in fundamental accounting"+
+      "principles to draw conclusions about the financial bases for stock price"+
+      "valuation.")
 
 # get ratios for the company
 def getRatios(t):
-    info = yf.Ticker(t).info
-    # price/earnings ratio
-    pe = info['forwardPE']
+    i = yf.Ticker(t).info
+    #price/earnings ratio
+    pe = i['forwardPE']
     if pe < 20:
         pe_eval = 'undervalued'
     elif pe >= 20 and pe < 25:
         pe_eval = 'fair'
-    else: # >=25
+    else:
         pe_eval = 'overvalued'
     
-    # debt to equity ratio = total liabilities / shareholders equity
+    #price/book = market cap / book value equity
+    #book value equity = stockholders equity
     bdf = yf.Ticker(t).balance_sheet
     se = bdf.loc['Stockholders Equity', bdf.columns[0]]
+    pb = i['marketCap']/(se*100)
+    if pb < 1:
+        pb_eval = 'undervalued'
+    elif pb == 1:
+        pb_eval = 'fair'
+    else:
+        pb_eval = 'overvalued'
+        print("ASDfad")
+    
+    #price/earnings to growth ratio
+    peg = pe / (i['earningsGrowth']*100)
+    if peg <= 1:
+        peg_eval = 'undervalued'
+    else:
+        peg_eval = 'overvalued'
+    
+    #debt to equity ratio = total liabilities / shareholders equity
     l = bdf.loc['Total Debt',bdf.columns[0]]
     de = l/se
     if de <= 1.5:
         de_eval = 'undervalued'
     elif de > 1.5 and de < 2:
         de_eval = 'fair'
-    else: # >=2
+    else: #>=2
         de_eval = 'overvalued'
     
-    return pd.DataFrame({'Price to Earnings':[pe,pe_eval],'Debt to Equity':[de,de_eval]},
+    return pd.DataFrame({'Price to Earnings':[pe,pe_eval],'Price to Books':[pb,pb_eval],
+                         'Price/Earnings to Growth':[peg,peg_eval],'Debt to Equity':[de,de_eval]},
                        index=['Ratio', 'Evaluation'])
 
 # display the ratios for the selected stock and display its valuation
