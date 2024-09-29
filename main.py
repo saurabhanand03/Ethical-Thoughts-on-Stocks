@@ -235,31 +235,31 @@ predicted_price_df = pd.DataFrame({
 st.dataframe(predicted_price_df, hide_index=True)
 
 
-################################
-### FORECASTING WITH PROPHET ###
-################################
-st.subheader('Forecasting with Prophet')
+# ################################
+# ### FORECASTING WITH PROPHET ###
+# ################################
+# st.subheader('Forecasting with Prophet')
 
-# Predict forecast with Prophet
-df_train = data[['Date', 'Close']]
-df_train = df_train.rename(columns={"Date": "ds", "Close": "y"})
-m = Prophet()
-m.fit(df_train)
-future = m.make_future_dataframe(periods=365)
-forecast = m.predict(future)
+# # Predict forecast with Prophet
+# df_train = data[['Date', 'Close']]
+# df_train = df_train.rename(columns={"Date": "ds", "Close": "y"})
+# m = Prophet()
+# m.fit(df_train)
+# future = m.make_future_dataframe(periods=365)
+# forecast = m.predict(future)
 
-# Plot forecast stock data
-fig1 = go.Figure()
-fig1.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], mode='lines', name='Forecast'))
-fig1.update_layout(margin=dict(t=0, b=0))
-st.plotly_chart(fig1)
+# # Plot forecast stock data
+# fig1 = go.Figure()
+# fig1.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], mode='lines', name='Forecast'))
+# fig1.update_layout(margin=dict(t=0, b=0))
+# st.plotly_chart(fig1)
 
-formatted_forecast = data.style.format({col: "{:.2f}" for col in ['Open', 'High', 'Low', 'Close', 'Adj Close']})
-st.dataframe(forecast, hide_index=True, use_container_width=True)
+# formatted_forecast = data.style.format({col: "{:.2f}" for col in ['Open', 'High', 'Low', 'Close', 'Adj Close']})
+# st.dataframe(forecast, hide_index=True, use_container_width=True)
 
-# st.write('Forecast components:')
-# fig2 = m.plot_components(forecast)
-# st.write(fig2)
+# # st.write('Forecast components:')
+# # fig2 = m.plot_components(forecast)
+# # st.write(fig2)
 
 
 ##################
