@@ -37,16 +37,20 @@ TOMORROW = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
 # Load ESG data
 esg_data = load_esg_data()
 
-# Filter ESG data for desired grades
-desired_grades = ['AAA', 'AA', 'A']
-filtered_esg_data = esg_data[esg_data['total_grade'].isin(desired_grades)]
+# # Filter ESG data for desired grades
+# desired_grades = ['AAA', 'AA', 'A']
+# filtered_esg_data = esg_data[esg_data['total_grade'].isin(desired_grades)]
 
-# Extract list of stock tickers with desired ESG grades
-filtered_stock_list = filtered_esg_data['ticker'].unique()
-filtered_stock_list = sorted([ticker.upper() for ticker in filtered_stock_list])
+# # Extract list of stock tickers with desired ESG grades
+# filtered_stock_list = filtered_esg_data['ticker'].unique()
+# filtered_stock_list = sorted([ticker.upper() for ticker in filtered_stock_list])
+
+# All stocks
+stock_list = esg_data['ticker'].unique()
+stock_list = sorted([ticker.upper() for ticker in stock_list])
 
 # Create a dropdown menu with the filtered stock list
-selected_stock = st.selectbox('Select a stock:', filtered_stock_list)
+selected_stock = st.selectbox('Select a stock:', stock_list)
 
 # Load data for the selected stock
 data_load_state = st.text('Loading data...')
