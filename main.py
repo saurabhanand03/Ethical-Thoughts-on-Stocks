@@ -89,27 +89,6 @@ reshaped_data.set_index('Category', inplace=True)
 # Display the reshaped DataFrame
 st.dataframe(reshaped_data)
 
-<<<<<<< HEAD
-=======
-
-##################
-### STOCK DATA ###
-##################
-st.subheader('Raw data')
-
-# Plot raw data
-def plot_raw_data():
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Open'], name="stock_open"))
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name="stock_close"))
-    st.plotly_chart(fig)
-
-plot_raw_data()
-
-st.dataframe(data.tail(), hide_index=True)
-
-
->>>>>>> 9353962fd7f6ece7011159c53009eacfe15bb188
 ########################
 ### FINANCIAL RATIOS ###
 ########################
@@ -258,69 +237,6 @@ predicted_price = Y_pred[0][0]
 model_load_state.empty()
 
 st.write(f'Predicted price for {TOMORROW}: ${predicted_price:.2f}')
-
-
-########################
-### FINANCIAL RATIOS ###
-########################
-# get ratios for the company
-def getRatios(t):
-    info = yf.Ticker(t).info
-    #price/earnings ratio
-    pe = info['forwardPE']
-    if pe < 20:
-        pe_eval = 'undervalued'
-    elif pe >= 20 and pe < 25:
-        pe_eval = 'fair'
-    else:
-        pe_eval = 'overvalued'
-    
-    #price/book = market cap / book value equity
-    #book value equity = stockholders equity
-    bdf = yf.Ticker('AAPL').balance_sheet
-    se = bdf.loc['Stockholders Equity', bdf.columns[0]]
-    pb = info['marketCap']/se
-    if pb < 1:
-        pb_eval = 'undervalued'
-    elif pb == 1:
-        pb_eval = 'fair'
-    else:
-        pb_eval = 'overvalued'
-    
-    #price/earnings to growth ratio
-    peg = pe / info['earningsGrowth']
-    if peg <= 1:
-        peg_eval = 'undervalued'
-    else:
-        peg_eval = 'overvalued'
-    
-    #debt to equity ratio = total liabilities / shareholders equity
-    l = bdf.loc['Total Debt',bdf.columns[0]]
-    de = l/se
-    if de <= 1.5:
-        de_eval = 'undervalued'
-    elif de > 1.5 and de < 2:
-        de_eval = 'fair'
-    else: #>=2
-        de_eval = 'overvalued'
-    
-    return pd.DataFrame({'Price to Earnings':[pe,pe_eval],'Price to Books':[pb,pb_eval],
-                         'Price/Earnings to Growth':[peg,peg_eval],'Debt to Equity':[de,de_eval]},
-                       index=['Ratio', 'Evaluation'])
-# display the ratios for the selected stock and display its valuation
-ratios = getRatios(selected_stock)
-st.dataframe(ratios)
-
-# walkthrough of the meaning for each of the ratios
-st.write("Financial ratios are used to determine if a company's stocks are undervalued",
-      "or overvalued based on company data. The price to earnings ratio",
-      "compares stock price to the company's earnings. The price to books ratio compares",
-      "stock price to book value equity, or stockholders' equity. The price/earnings to",
-      "growth ratio factors in the price earnings ratio and compares it to the earnings",
-      "growth rate. Finally, the debt to equity ratio is the ratio of total liabilities"
-      "to total stockholders' equity. The financial ratios used for this project factor",
-      "in fundamental accounting principles to draw conclusions about the financial bases",
-      "for stock price valuation.")
 
 
 ##################
