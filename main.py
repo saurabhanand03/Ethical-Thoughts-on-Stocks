@@ -10,6 +10,8 @@ import plotly.graph_objs as go
 from prophet import Prophet
 from keras.models import Sequential
 from keras.layers import SimpleRNN, Dense
+import io
+import contextlib
 
 st.title('Stock Analysis for Social and Environmental Good')
 
@@ -30,7 +32,7 @@ def load_esg_data():
 ######################
 START = "2000-01-01"
 TODAY = date.today().strftime("%Y-%m-%d")
-TOMORROW = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d")
+TOMORROW = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
 
 # Load ESG data
 esg_data = load_esg_data()
@@ -52,26 +54,29 @@ data = load_data(selected_stock)
 esg_data = load_esg_data()
 data_load_state.empty()
 
+
 ##################
 ### STOCK DATA ###
 ##################
-st.subheader('Raw data')
+st.subheader(f'Stock data for {esg_data[esg_data["ticker"] == selected_stock.lower()]["name"].iloc[0]}')
 
-# Plot raw data
-def plot_raw_data():
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Open'], name="stock_open"))
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name="stock_close"))
-    st.plotly_chart(fig)
+# Plot stock data
+fig = go.Figure()
+fig.add_trace(go.Scatter(x=data['Date'], y=data['Open'], name="stock_open"))
+fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name="stock_close"))
+fig.update_layout(margin=dict(t=0, b=0))
+st.plotly_chart(fig)
 
-plot_raw_data()
+# st.dataframe(data, hide_index=True)
+# st.dataframe(data.applymap(lambda x: f"{x:.2f}" if isinstance(x, (int, float)) else x), hide_index=True)
+formatted_data = data.style.format({col: "{:.2f}" for col in ['Open', 'High', 'Low', 'Close', 'Adj Close']})
+st.dataframe(formatted_data, hide_index=True, use_container_width=True)
 
-st.dataframe(data, hide_index=True)
 
 ##################
 ### ESG SCORES ###
 ##################
-st.subheader(f'ESG Score for {esg_data[esg_data["ticker"] == selected_stock.lower()]["name"].iloc[0]}:')
+st.subheader('ESG Score:')
 st.info('What is an ESG Score? An ESG score is an objective measurement or evaluation of a given company, fund, or security\'s performance with respect to Environmental, Social, and Governance (ESG) issues.')
 
 # Merge ESG ratings with stock data
@@ -89,23 +94,33 @@ reshaped_data.set_index('Category', inplace=True)
 # Display the reshaped DataFrame
 st.dataframe(reshaped_data)
 
+
 ########################
 ### FINANCIAL RATIOS ###
 ########################
 st.subheader('Financial Ratios')
+
+# walkthrough of the meaning for each of the ratios
+st.info("Financial ratios are used to determine if a company's stocks are undervalued " +
+      "or overvalued based on company data. The price to earnings ratio " +
+      "compares stock price to the company's earnings. Meanwhile, the debt to equity ratio " +
+      "is the ratio of total liabilities to total stockholders' equity. The financial ratios " + 
+      "used for this project factor in fundamental accounting principles to draw conclusions " +
+      "about the financial bases for stock price valuation.")
+
 # get ratios for the company
 def getRatios(t):
     info = yf.Ticker(t).info
-    #price/earnings ratio
+    # price/earnings ratio
     pe = info['forwardPE']
     if pe < 20:
         pe_eval = 'undervalued'
     elif pe >= 20 and pe < 25:
         pe_eval = 'fair'
-    else:
+    else: # >=25
         pe_eval = 'overvalued'
     
-    #debt to equity ratio = total liabilities / shareholders equity
+    # debt to equity ratio = total liabilities / shareholders equity
     bdf = yf.Ticker(t).balance_sheet
     se = bdf.loc['Stockholders Equity', bdf.columns[0]]
     l = bdf.loc['Total Debt',bdf.columns[0]]
@@ -114,23 +129,15 @@ def getRatios(t):
         de_eval = 'undervalued'
     elif de > 1.5 and de < 2:
         de_eval = 'fair'
-    else: #>=2
+    else: # >=2
         de_eval = 'overvalued'
     
     return pd.DataFrame({'Price to Earnings':[pe,pe_eval],'Debt to Equity':[de,de_eval]},
                        index=['Ratio', 'Evaluation'])
+
 # display the ratios for the selected stock and display its valuation
 ratios = getRatios(selected_stock)
 st.dataframe(ratios)
-
-# walkthrough of the meaning for each of the ratios
-st.write("Financial ratios are used to determine if a company's stocks are undervalued",
-      "or overvalued based on company data. The price to earnings ratio",
-      "compares stock price to the company's earnings. Meanwhile, the debt to equity ratio",
-      "is the ratio of total liabilities to total stockholders' equity. The financial ratios", 
-      "used for this project factor in fundamental accounting principles to draw conclusions",
-      "about the financial bases for stock price valuation.")
-
 
 
 # ########################
@@ -168,45 +175,12 @@ st.write("Financial ratios are used to determine if a company's stocks are under
 # plot_predictions(y_test, predictions)
 
 
-################################
-### FORECASTING WITH PROPHET ###
-################################
-st.subheader('Forecasting')
-
-# Predict forecast with Prophet
-df_train = data[['Date', 'Close']]
-df_train = df_train.rename(columns={"Date": "ds", "Close": "y"})
-m = Prophet()
-m.fit(df_train)
-future = m.make_future_dataframe(periods=365)
-forecast = m.predict(future)
-
-# Show and plot forecast
-st.write(forecast.tail())
-fig1 = go.Figure()
-fig1.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], mode='lines', name='Forecast'))
-fig1.layout.update(title_text='Forecast Plot', xaxis_rangeslider_visible=True)
-st.plotly_chart(fig1)
-
-st.write('Forecast components:')
-fig2 = m.plot_components(forecast)
-st.write(fig2)
-
-
 ############################
 ### FORECASTING WITH RNN ###
 ############################
 st.subheader('Forecasting with RNN')
 
-model_load_state = st.text('Creating RNN model...')
-
-def create_rnn_model(data_shape):
-    model = Sequential()
-    model.add(SimpleRNN(128, return_sequences=True, activation='tanh', input_shape=data_shape[1:]))
-    model.add(SimpleRNN(128, return_sequences=False, activation='tanh'))
-    model.add(Dense(32))
-    model.add(Dense(1))
-    return model
+model_create_state = st.text('Creating RNN model...')
 
 # Sliding window approach with window of 30 days
 X, Y = [], []
@@ -220,23 +194,68 @@ X, Y = np.array(X).reshape(-1, 30, 1), np.array(Y)
 # X[2] = days 3-32, Y[2] = day 33
 # ...
 # X[n] = days n+1 to n+30, Y[n] = day n+31
+
 X_train, _, Y_train, _ = train_test_split(X, Y, test_size=0.2, random_state=42)
 
-model = create_rnn_model(X_train.shape)
-model.summary()
+def create_rnn_model(data_shape):
+    model = Sequential()
+    model.add(SimpleRNN(128, return_sequences=True, activation='tanh', input_shape=data_shape[1:]))
+    model.add(SimpleRNN(128, return_sequences=False, activation='tanh'))
+    model.add(Dense(32))
+    model.add(Dense(1))
+    return model
 
-model_load_state.text('Fitting RNN model...')
+model = create_rnn_model(X_train.shape)
+model_summary = io.StringIO()
+with contextlib.redirect_stdout(model_summary):
+    model.summary()
+
+st.code(model_summary.getvalue())
+model_create_state.empty()
+
+model_fit_state = st.text('Fitting RNN model...')
 model.compile(optimizer='adam', loss='mean_squared_error')
 model.fit(X_train, Y_train, epochs=100, batch_size=64)
+model_fit_state.empty()
 
-model_load_state.text('Predicting next day price...')
+model_predict_state = st.text('Predicting next day price...')
 X_pred = np.reshape(df[-30:], (1, 30, 1))
 Y_pred = model.predict(X_pred)
 predicted_price = Y_pred[0][0]
+model_predict_state.empty()
 
-model_load_state.empty()
+predicted_price_df = pd.DataFrame({
+    'Date': [TOMORROW],
+    'Close': [f"{predicted_price:.2f}"]
+})
+st.dataframe(predicted_price_df, hide_index=True)
 
-st.write(f'Predicted price for {TOMORROW}: ${predicted_price:.2f}')
+
+################################
+### FORECASTING WITH PROPHET ###
+################################
+st.subheader('Forecasting with Prophet')
+
+# Predict forecast with Prophet
+df_train = data[['Date', 'Close']]
+df_train = df_train.rename(columns={"Date": "ds", "Close": "y"})
+m = Prophet()
+m.fit(df_train)
+future = m.make_future_dataframe(periods=365)
+forecast = m.predict(future)
+
+# Plot forecast stock data
+fig1 = go.Figure()
+fig1.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], mode='lines', name='Forecast'))
+fig1.update_layout(margin=dict(t=0, b=0))
+st.plotly_chart(fig1)
+
+formatted_forecast = data.style.format({col: "{:.2f}" for col in ['Open', 'High', 'Low', 'Close', 'Adj Close']})
+st.dataframe(forecast, hide_index=True, use_container_width=True)
+
+# st.write('Forecast components:')
+# fig2 = m.plot_components(forecast)
+# st.write(fig2)
 
 
 ##################
